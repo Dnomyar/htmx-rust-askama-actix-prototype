@@ -1,12 +1,14 @@
-<div hx-trigger='cancel' class='editing' hx-get="/posts/{{data.id}}">
-    <h3><input type="text" name="title" value="{{data.title}}"></h3>
-    <p>{{data.published_at}} by {{data.author}}</p>
-    <p><textarea id="" cols="30" rows="10" name="content">{{data.content}}</textarea></p>
-    <button class="btn btn-danger" hx-get="/posts/{{data.id}}">
-        Cancel
-    </button>
-    <button class="btn btn-danger" hx-put="/posts/{{data.id}}" hx-include="closest div" hx-target="closest div"
-        hx-swap="outerHTML">
-        Save
+<div>
+    <div>
+        <h3><input type="text" name="title" value="{{data.title}}" hx-put="/posts/{{data.id}}"
+                hx-trigger="input changed delay:500ms" hx-include="closest div" hx-swap="none"></h3>
+        <p>{{data.published_at}} by {{data.author}}</p>
+        <p><textarea id="" cols="30" rows="10" name="content" hx-put="/posts/{{data.id}}"
+                hx-trigger="input changed delay:500ms" hx-include="closest div"
+                hx-swap="none">{{data.content}}</textarea>
+        </p>
+    </div>
+    <button class="btn btn-danger" hx-get="/posts/ui/posts/{{data.id}}">
+        Done
     </button>
 </div>

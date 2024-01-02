@@ -8,8 +8,6 @@ use actix_web::{
 };
 use askama::Template;
 
-static SESSION_NAME: &str = "user_id";
-
 #[derive(Template)]
 #[template(path = "auth/not_logged_in.html")]
 struct NotLoggedIn;
@@ -25,11 +23,15 @@ pub struct AuthInfo {
     pub name: String,
 }
 
-pub fn get_auth_info(identity: Option<Identity>) -> Option<AuthInfo> {
-    identity.map(|id| AuthInfo {
-        user_id: id.id().unwrap_or("".to_string()),
-        name: id.id().unwrap_or("".to_string()),
-    })
+pub fn get_auth_info(identity: Identity) -> AuthInfo {
+    AuthInfo {
+        user_id: identity.id().unwrap_or("".to_string()),
+        name: identity.id().unwrap_or("".to_string()),
+    }
+}
+
+pub fn get_auth_info_option(identity: Option<Identity>) -> Option<AuthInfo> {
+    identity.map(|id| get_auth_info(id))
 }
 
 pub fn render_auth_status(
