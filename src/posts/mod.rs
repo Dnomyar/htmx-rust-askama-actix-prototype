@@ -9,11 +9,14 @@ use std::{
 
 use crate::{
     auth::{self, get_auth_info, get_auth_info_option, AuthInfo},
-    domain::model::{
-        author::{self, Author},
-        posts::{Post, Posts},
+    domain::{
+        author_repository::AuthorRepository,
+        model::{
+            author::{self, Author},
+            posts::{Post, Posts},
+        },
     },
-    posts::{author_repository::AuthorRepository, post_repository::PostRepository, templates::*},
+    posts::{post_repository::PostRepository, templates::*},
     Authors,
 };
 use actix_identity::Identity;

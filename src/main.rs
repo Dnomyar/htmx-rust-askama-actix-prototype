@@ -1,6 +1,6 @@
-mod auth;
-mod domain;
-mod posts;
+pub mod auth;
+pub mod domain;
+pub mod posts;
 
 use actix_files as fs;
 use actix_identity::IdentityMiddleware;
@@ -20,14 +20,17 @@ use actix_web::{
 };
 use askama::Template;
 use chrono::{DateTime, Duration, Local, Utc};
-use domain::model::{
-    author::Author,
-    posts::{Post, Posts},
+use domain::{
+    author_repository::AuthorRepository,
+    model::{
+        author::Author,
+        posts::{Post, Posts},
+    },
 };
 use futures_util::future::FutureExt;
 use posts::{
     add_post_button_endpoint,
-    author_repository::{AuthorRepository, InMemoryAuthorRepository},
+    author_repository::InMemoryAuthorRepository,
     create_post_endpoint, edit_post_endpoint, list_posts_endpoint, post_endpoint,
     post_repository::{self, InMemoryPostRepository, PostRepository},
     post_update_endpoint,
