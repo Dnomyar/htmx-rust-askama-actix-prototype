@@ -1,0 +1,6 @@
+<div class="posts" hx-target="closest div" hx-swap="outerHTML">
+{% for post in posts.as_slice() -%}
+    {{ post|safe }}
+{% endfor %}
+</div>
+

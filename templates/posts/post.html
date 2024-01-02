@@ -1,0 +1,21 @@
+<div>
+    <h3>{{data.title}}</h3>
+    <p>{{data.published_at}} by {{data.author}}</p>
+    <button 
+        hx-get="/posts/{{data.id}}/edit" 
+        hx-trigger="edit"
+        _="on click
+             if .editing is not empty
+               Swal.fire({title: 'Already Editing',
+                          showCancelButton: true,
+                          confirmButtonText: 'Yep, Edit This Row!',
+                          text:'Hey!  You are already editing a row!  Do you want to cancel that edit and continue?'})
+               if the result's isConfirmed is false
+                 halt
+               end
+               send cancel to .editing
+             end
+             trigger edit">
+         Edit</button>
+    <p>{{data.content}}</p>
+</div>
