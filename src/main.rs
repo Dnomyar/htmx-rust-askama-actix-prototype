@@ -11,29 +11,26 @@ use std::{collections::HashMap, sync::Mutex};
 use actix_files::NamedFile;
 use actix_web::{
     cookie::Key,
-    dev::Service as _,
-    error::{self, InternalError},
     get,
-    http::StatusCode,
-    web::{self, Data},
-    App, HttpServer, Responder,
+    web::{Data},
+    App, HttpServer,
 };
-use askama::Template;
-use chrono::{DateTime, Duration, Local, Utc};
+
+use chrono::{Utc};
 use domain::{
     author_repository::AuthorRepository,
     model::{
         author::Author,
-        posts::{Post, Posts},
+        posts::{Post},
     },
     post_repository::PostRepository,
 };
-use futures_util::future::FutureExt;
+
 use posts::{
     add_post_button_endpoint,
     author_repository::InMemoryAuthorRepository,
     create_post_endpoint, edit_post_endpoint, list_posts_endpoint, post_endpoint,
-    post_repository::{self, InMemoryPostRepository},
+    post_repository::{InMemoryPostRepository},
     post_update_endpoint,
 };
 

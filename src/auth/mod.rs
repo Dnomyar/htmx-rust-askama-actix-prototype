@@ -1,10 +1,10 @@
 use actix_identity::Identity;
-use actix_session::Session;
+
 use actix_web::{
     error::InternalError,
     get,
     http::{header::TryIntoHeaderPair, StatusCode},
-    put, HttpMessage, HttpRequest, HttpResponse, Responder,
+    put, HttpMessage, HttpRequest, HttpResponse,
 };
 use askama::Template;
 
@@ -54,11 +54,11 @@ pub fn render_auth_status(
                         }
                         ok.body(body)
                     })
-                    .unwrap_or_else(|e| {
+                    .unwrap_or_else(|_e| {
                         HttpResponse::InternalServerError().body("Internal Server Error")
                     })
             })
-            .unwrap_or_else(|e| HttpResponse::InternalServerError().body("Internal Server Error")),
+            .unwrap_or_else(|_e| HttpResponse::InternalServerError().body("Internal Server Error")),
         None => NotLoggedIn
             .render()
             .map(|body| {
@@ -71,7 +71,7 @@ pub fn render_auth_status(
                 }
                 ok.body(body)
             })
-            .unwrap_or_else(|e| HttpResponse::InternalServerError().body("Internal Server Error")),
+            .unwrap_or_else(|_e| HttpResponse::InternalServerError().body("Internal Server Error")),
     }
 }
 

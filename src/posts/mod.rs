@@ -2,33 +2,26 @@ pub mod author_repository;
 pub mod post_repository;
 pub mod templates;
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::collections::HashMap;
 
 use crate::{
-    auth::{self, get_auth_info, get_auth_info_option, AuthInfo},
+    auth::{get_auth_info, get_auth_info_option, AuthInfo},
     domain::{
         author_repository::AuthorRepository,
-        model::{
-            author::{self, Author},
-            posts::{Post, Posts},
-        },
+        model::{author::Author, posts::Post},
         post_repository::PostRepository,
     },
     posts::templates::*,
-    Authors,
 };
 use actix_identity::Identity;
-use actix_session::Session;
+
 use actix_web::{
-    error::{self, InternalError},
+    error::InternalError,
     get,
     http::StatusCode,
     post, put,
-    web::{self, Data, Path, Query, Redirect},
-    App, HttpResponse, HttpServer, Responder,
+    web::{self, Data, Path, Query},
+    HttpResponse,
 };
 use askama::Template;
 use chrono::{Duration, Utc};
@@ -94,7 +87,7 @@ pub async fn edit_post_endpoint(
         Ok(Some(post)) => PostEditTemplate { data: post }
             .render()
             .map(|body| HttpResponse::Ok().body(body))
-            .unwrap_or_else(|e| HttpResponse::InternalServerError().body("Internal Server Error")),
+            .unwrap_or_else(|_e| HttpResponse::InternalServerError().body("Internal Server Error")),
         Ok(None) => HttpResponse::NotFound().body("Post not found"),
         Err(err) => HttpResponse::InternalServerError().body(err),
     }
@@ -157,7 +150,7 @@ pub async fn post_update_endpoint(
     id: Path<String>,
     form: web::Form<PostUpdateFormData>,
     post_repository: Data<Box<dyn PostRepository>>,
-    identify: Identity,
+    _identify: Identity,
 ) -> HttpResponse {
     match update_post(&id, &form, post_repository.clone()) {
         Ok(_) => HttpResponse::Ok().body(""),
@@ -209,7 +202,7 @@ pub async fn list_posts_endpoint(
             .unwrap_or_else(|err| {
                 HttpResponse::InternalServerError().body(format!("Internal Server Error: {}", err))
             }),
-        Err(err) => HttpResponse::InternalServerError().body("Internal Server Error"),
+        Err(_err) => HttpResponse::InternalServerError().body("Internal Server Error"),
     }
 }
 
