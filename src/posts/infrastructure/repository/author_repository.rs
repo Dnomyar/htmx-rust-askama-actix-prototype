@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Mutex};
 
-use crate::domain::{author_repository::AuthorRepository, model::author::Author};
+use crate::posts::domain::{author_repository::AuthorRepository, model::author::Author};
 
 pub struct InMemoryAuthorRepository {
     pub authors: Mutex<HashMap<String, Author>>,

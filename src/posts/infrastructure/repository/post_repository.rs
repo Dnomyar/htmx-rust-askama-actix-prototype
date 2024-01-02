@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Mutex};
 
-use crate::domain::{model::posts::Post, post_repository::PostRepository};
+use crate::posts::domain::{model::posts::Post, post_repository::PostRepository};
 
 pub struct InMemoryPostRepository {
     pub posts: Mutex<HashMap<String, Post>>,

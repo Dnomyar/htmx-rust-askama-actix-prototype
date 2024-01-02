@@ -1,35 +1,34 @@
 pub mod auth;
-pub mod domain;
 pub mod posts;
 
 use actix_files as fs;
 use actix_identity::IdentityMiddleware;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use auth::{auth_status, login, logout};
+use posts::{
+    domain::{
+        author_repository::AuthorRepository,
+        model::{author::Author, posts::Post},
+        post_repository::PostRepository,
+    },
+    infrastructure::{
+        http::routes::*,
+        repository::{
+            author_repository::InMemoryAuthorRepository, post_repository::InMemoryPostRepository,
+        },
+    },
+};
 use std::{collections::HashMap, sync::Mutex};
 
 use actix_files::NamedFile;
 use actix_web::{cookie::Key, get, web::Data, App, HttpServer};
 
 use chrono::Utc;
-use domain::{
-    author_repository::AuthorRepository,
-    model::{author::Author, posts::Post},
-    post_repository::PostRepository,
-};
-
-use posts::{
-    add_post_button_endpoint, author_repository::InMemoryAuthorRepository, create_post_endpoint,
-    edit_post_endpoint, list_posts_endpoint, post_endpoint,
-    post_repository::InMemoryPostRepository, post_update_endpoint,
-};
 
 #[get("/")]
 async fn index() -> actix_web::Result<NamedFile> {
     Ok(NamedFile::open("index.html")?)
 }
-
-pub type Authors = HashMap<String, Author>;
 
 // The secret key would usually be read from a configuration file/environment variables.
 fn get_secret_key() -> Key {

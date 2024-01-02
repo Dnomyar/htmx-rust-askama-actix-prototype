@@ -2,7 +2,7 @@ use askama::Template;
 
 use crate::auth::AuthInfo;
 
-use super::PostData;
+use super::routes::PostData;
 
 #[derive(Template)]
 #[template(path = "posts/post.html")]
