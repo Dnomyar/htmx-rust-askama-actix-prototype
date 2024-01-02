@@ -1,15 +1,6 @@
 use std::{collections::HashMap, sync::Mutex};
 
-use crate::domain::model::posts::Post;
-
-pub trait PostRepository
-where
-    Self: Send + Sync,
-{
-    fn find(&self, id: String) -> Result<Option<Post>, String>;
-    fn windowed(&self, offset: usize, limit: usize) -> Result<Vec<Post>, String>;
-    fn save(&self, post: Post) -> Result<(), String>;
-}
+use crate::domain::{model::posts::Post, post_repository::PostRepository};
 
 pub struct InMemoryPostRepository {
     pub posts: Mutex<HashMap<String, Post>>,

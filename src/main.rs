@@ -26,13 +26,14 @@ use domain::{
         author::Author,
         posts::{Post, Posts},
     },
+    post_repository::PostRepository,
 };
 use futures_util::future::FutureExt;
 use posts::{
     add_post_button_endpoint,
     author_repository::InMemoryAuthorRepository,
     create_post_endpoint, edit_post_endpoint, list_posts_endpoint, post_endpoint,
-    post_repository::{self, InMemoryPostRepository, PostRepository},
+    post_repository::{self, InMemoryPostRepository},
     post_update_endpoint,
 };
 

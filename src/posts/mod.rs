@@ -15,8 +15,9 @@ use crate::{
             author::{self, Author},
             posts::{Post, Posts},
         },
+        post_repository::PostRepository,
     },
-    posts::{post_repository::PostRepository, templates::*},
+    posts::templates::*,
     Authors,
 };
 use actix_identity::Identity;
