@@ -1,15 +1,21 @@
 use std::sync::Mutex;
 
 use crate::{
-    domain::model::{author, posts::{Posts, Post}},
+    auth::{self, get_auth_info, AuthInfo},
+    domain::model::{
+        author,
+        posts::{Post, Posts},
+    },
     Authors,
 };
+use actix_session::Session;
 use actix_web::{
     error::{self, InternalError},
     get,
     http::StatusCode,
-    web::{self, Data, Query, Path, Redirect},
-    App, HttpServer, Responder, put, post,
+    post, put,
+    web::{self, Data, Path, Query, Redirect},
+    App, HttpServer, Responder,
 };
 use askama::Template;
 use chrono::{Duration, Utc};
@@ -25,20 +31,21 @@ struct PostData {
 
 #[derive(Template)]
 #[template(path = "posts/post.html")]
-struct PostTemplate {
-    data: PostData
+struct PostTemplate<'a> {
+    data: PostData,
+    auth: &'a Option<AuthInfo>,
 }
 
 #[derive(Template)]
 #[template(path = "posts/post_edit.html")]
 struct PostEditTemplate {
-    data: PostData
+    data: PostData,
 }
 
 #[derive(Template)]
 #[template(path = "posts/posts_list.html")]
 struct ListPostsTemplate<'a> {
-    posts: &'a Vec<PostTemplate>,
+    posts: &'a Vec<PostTemplate<'a>>,
     next_page: &'a u16,
 }
 
@@ -47,21 +54,19 @@ struct PaginationQueryParams {
     page: Option<u16>,
 }
 
-fn post_to_post_data(post: &Post, authors: &Authors) -> PostData{
-    PostData{
+fn post_to_post_data(post: &Post, authors: &Authors) -> PostData {
+    PostData {
         id: post.id.to_string(),
         published_at: Utc::now().signed_duration_since(post.published_at),
         author: authors
-                    .get(&post.author)
-                    .map(|author| author.name.to_string())
-                    .unwrap_or("unknown".to_string())
-                    .to_string(),
-                title: post.title.to_string(),
-                content: post.content.to_string(),
+            .get(&post.author)
+            .map(|author| author.name.to_string())
+            .unwrap_or("unknown".to_string())
+            .to_string(),
+        title: post.title.to_string(),
+        content: post.content.to_string(),
     }
-
 }
-
 
 #[get("/posts/{id}/edit")]
 pub async fn edit_post_endpoint(
@@ -70,36 +75,41 @@ pub async fn edit_post_endpoint(
     authors: Data<Authors>,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
     match posts.lock().unwrap().0.iter().find(|p| p.id == *id) {
-        Some(post) => PostEditTemplate{
-            data: post_to_post_data(post, &authors)
-        }  .render()
+        Some(post) => PostEditTemplate {
+            data: post_to_post_data(post, &authors),
+        }
+        .render()
         .map_err(|err| InternalError::new(err.to_string(), StatusCode::INTERNAL_SERVER_ERROR)),
-        None =>
-        todo!()
+        None => todo!(),
     }
-  
 }
 
-fn get_post_by_id<'a>(id: &str, posts: &Data<Mutex<Posts>>, authors: &Authors) -> Result<String, InternalError<String>> {
+fn get_post_by_id<'a>(
+    id: &str,
+    posts: &Data<Mutex<Posts>>,
+    authors: &Authors,
+    auth: &'a Option<AuthInfo>,
+) -> Result<String, InternalError<String>> {
     match posts.lock().unwrap().0.iter().find(|p| p.id == *id) {
-        Some(post) => PostTemplate{
-            data: post_to_post_data(post, &authors)
-        }  .render()
+        Some(post) => PostTemplate {
+            data: post_to_post_data(post, &authors),
+            auth,
+        }
+        .render()
         .map_err(|err| InternalError::new(err.to_string(), StatusCode::INTERNAL_SERVER_ERROR)),
-        None =>
-        todo!()
+        None => todo!(),
     }
 }
-
 
 #[get("/posts/{id}")]
 pub async fn post_endpoint(
     id: Path<String>,
     posts: Data<Mutex<Posts>>,
     authors: Data<Authors>,
+    session: Session,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
-    get_post_by_id(&id, &posts, &authors)
-  
+    let auth = get_auth_info(session);
+    get_post_by_id(&id, &posts, &authors, &auth)
 }
 
 #[derive(Deserialize)]
@@ -114,32 +124,44 @@ pub async fn post_update_endpoint(
     form: web::Form<PostUpdateFormData>,
     posts: Data<Mutex<Posts>>,
     authors: Data<Authors>,
+    session: Session,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
-    let res = posts.lock().unwrap().0.iter_mut().find(|p| p.id == *id).map(|post| {
-        post.title = form.title.clone();
-        post.content = form.content.clone();
-        post
-    });
-    get_post_by_id(&id, &posts, &authors)
+    let res = posts
+        .lock()
+        .unwrap()
+        .0
+        .iter_mut()
+        .find(|p| p.id == *id)
+        .map(|post| {
+            post.title = form.title.clone();
+            post.content = form.content.clone();
+            post
+        });
+    let auth = get_auth_info(session);
+    get_post_by_id(&id, &posts, &authors, &auth)
 }
-
 
 #[get("/posts")]
 pub async fn list_posts_endpoint(
     pagination: Query<PaginationQueryParams>,
     posts: Data<Mutex<Posts>>,
     authors: Data<Authors>,
+    session: Session,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
     let current_page = pagination.page.unwrap_or(0);
+    let auth = get_auth_info(session);
     ListPostsTemplate {
-        posts: &posts.lock().unwrap()
+        posts: &posts
+            .lock()
+            .unwrap()
             .0
             .chunks(3)
             .enumerate()
             .filter(|(idx, _)| *idx as u16 == current_page)
             .flat_map(|(_, posts)| {
                 posts.into_iter().map(|post| PostTemplate {
-                    data: post_to_post_data(post, &authors)
+                    data: post_to_post_data(post, &authors),
+                    auth: &auth,
                 })
             })
             .collect(),
@@ -155,18 +177,17 @@ pub async fn create_post_endpoint(
     authors: Data<Authors>,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
     let mut posts = posts.lock().unwrap();
-
     let post = Post {
-        id: uuid::Uuid::new_v4().to_string(), 
+        id: uuid::Uuid::new_v4().to_string(),
         published_at: Utc::now(),
         author: "unknown".to_string(),
         title: "New Post".to_string(),
         content: "".to_string(),
     };
     posts.0.insert(0, post.clone());
-    PostEditTemplate{
-        data: post_to_post_data(&post, &authors)
-    }  .render()
+    PostEditTemplate {
+        data: post_to_post_data(&post, &authors),
+    }
+    .render()
     .map_err(|err| InternalError::new(err.to_string(), StatusCode::INTERNAL_SERVER_ERROR))
-
 }

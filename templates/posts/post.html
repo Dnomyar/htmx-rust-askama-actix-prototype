@@ -1,10 +1,8 @@
 <div>
-    <h3>{{data.title}}</h3>
-    <p>{{data.published_at}} by {{data.author}}</p>
-    <button 
-        hx-get="/posts/{{data.id}}/edit" 
-        hx-trigger="edit"
-        _="on click
+  <h3>{{data.title}}</h3>
+  <p>{{data.published_at}} by {{data.author}}</p>
+  {% if auth.is_some() %}
+  <button hx-get="/posts/{{data.id}}/edit" hx-trigger="edit" _="on click
              if .editing is not empty
                Swal.fire({title: 'Already Editing',
                           showCancelButton: true,
@@ -16,6 +14,7 @@
                send cancel to .editing
              end
              trigger edit">
-         Edit</button>
-    <p>{{data.content}}</p>
+    Edit</button>
+  {% endif %}
+  <p>{{data.content}}</p>
 </div>

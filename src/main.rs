@@ -1,7 +1,10 @@
 mod domain;
 mod posts;
+mod auth;
 
 use actix_files as fs;
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
+use auth::{auth_status, login, logout};
 use std::{collections::HashMap, sync::Mutex};
 
 use actix_files::NamedFile;
@@ -10,7 +13,8 @@ use actix_web::{
     get,
     http::StatusCode,
     web::{self, Data},
-    App, HttpServer, Responder,
+    App, HttpServer, Responder, cookie::Key,
+    dev::Service as _
 };
 use askama::Template;
 use chrono::{Duration, Utc};
@@ -19,33 +23,31 @@ use domain::model::{
     posts::{Post, Posts},
 };
 use posts::{edit_post_endpoint, list_posts_endpoint, post_endpoint, post_update_endpoint, create_post_endpoint};
-
-#[derive(Template)]
-#[template(path = "hello.html")]
-struct HelloTemplate<'a> {
-    name: &'a str,
-}
+use futures_util::future::FutureExt;
 
 #[get("/")]
 async fn index() -> actix_web::Result<NamedFile> {
     Ok(NamedFile::open("index.html")?)
 }
 
-#[get("/hello/{name}")]
-async fn hello(
-    name: web::Path<String>,
-) -> std::result::Result<impl Responder, InternalError<String>> {
-    let hello = HelloTemplate { name: &name };
-    hello
-        .render()
-        .map_err(|err| InternalError::new(err.to_string(), StatusCode::INTERNAL_SERVER_ERROR))
-}
-
 pub type Authors = HashMap<String, Author>;
 
-#[actix_web::main]
+// The secret key would usually be read from a configuration file/environment variables.
+fn get_secret_key() -> Key {
+    let key: &Vec<u8> = &(0..64).collect();
+    Key::from(key)
+}
+
+#[actix_web::main] 
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(move || App::new().app_data(Data::new(Mutex::new(Posts(vec![
+    HttpServer::new(move || App::new()
+    .wrap(
+        SessionMiddleware::new(
+            CookieSessionStore::default(),
+            get_secret_key()
+        )
+        
+    ).app_data(Data::new(Mutex::new(Posts(vec![
         Post{
             id: "1".to_string(),
             published_at: Utc::now() - Duration::days(15),
@@ -154,7 +156,18 @@ async fn main() -> std::io::Result<()> {
     ])))).app_data(Data::new(HashMap::from([
         ("123".to_string(), Author{ id: "123".to_string(), name: "Damo".to_string()}), 
         ("345".to_string(), Author{ id: "345".to_string(), name: "Amanda".to_string()}), 
-    ]))).service(index).service(hello).service(fs::Files::new("/static", "./resources/public").show_files_listing()).service(list_posts_endpoint).service(edit_post_endpoint).service(post_endpoint).service(create_post_endpoint).service(post_update_endpoint))
+    ]))).service(index)
+    
+    .service(fs::Files::new("/static", "./resources/public").show_files_listing())
+    .service(list_posts_endpoint)
+    .service(edit_post_endpoint)
+    .service(post_endpoint)
+    .service(create_post_endpoint)
+    .service(post_update_endpoint)
+    .service(auth_status)
+    .service(login)
+    .service(logout)
+)
         .bind(("127.0.0.1", 8080))?
         .run()
         .await
