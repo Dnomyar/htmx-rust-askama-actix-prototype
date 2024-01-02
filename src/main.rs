@@ -9,29 +9,19 @@ use auth::{auth_status, login, logout};
 use std::{collections::HashMap, sync::Mutex};
 
 use actix_files::NamedFile;
-use actix_web::{
-    cookie::Key,
-    get,
-    web::{Data},
-    App, HttpServer,
-};
+use actix_web::{cookie::Key, get, web::Data, App, HttpServer};
 
-use chrono::{Utc};
+use chrono::Utc;
 use domain::{
     author_repository::AuthorRepository,
-    model::{
-        author::Author,
-        posts::{Post},
-    },
+    model::{author::Author, posts::Post},
     post_repository::PostRepository,
 };
 
 use posts::{
-    add_post_button_endpoint,
-    author_repository::InMemoryAuthorRepository,
-    create_post_endpoint, edit_post_endpoint, list_posts_endpoint, post_endpoint,
-    post_repository::{InMemoryPostRepository},
-    post_update_endpoint,
+    add_post_button_endpoint, author_repository::InMemoryAuthorRepository, create_post_endpoint,
+    edit_post_endpoint, list_posts_endpoint, post_endpoint,
+    post_repository::InMemoryPostRepository, post_update_endpoint,
 };
 
 #[get("/")]
