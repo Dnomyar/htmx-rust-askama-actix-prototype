@@ -3,6 +3,7 @@ mod posts;
 mod auth;
 
 use actix_files as fs;
+use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use auth::{auth_status, login, logout};
 use std::{collections::HashMap, sync::Mutex};
@@ -22,7 +23,7 @@ use domain::model::{
     author::Author,
     posts::{Post, Posts},
 };
-use posts::{edit_post_endpoint, list_posts_endpoint, post_endpoint, post_update_endpoint, create_post_endpoint};
+use posts::{edit_post_endpoint, list_posts_endpoint, post_endpoint, post_update_endpoint, create_post_endpoint, add_post_button_endpoint};
 use futures_util::future::FutureExt;
 
 #[get("/")]
@@ -41,6 +42,7 @@ fn get_secret_key() -> Key {
 #[actix_web::main] 
 async fn main() -> std::io::Result<()> {
     HttpServer::new(move || App::new()
+    .wrap(IdentityMiddleware::default())
     .wrap(
         SessionMiddleware::new(
             CookieSessionStore::default(),
@@ -164,6 +166,7 @@ async fn main() -> std::io::Result<()> {
     .service(post_endpoint)
     .service(create_post_endpoint)
     .service(post_update_endpoint)
+    .service(add_post_button_endpoint)
     .service(auth_status)
     .service(login)
     .service(logout)

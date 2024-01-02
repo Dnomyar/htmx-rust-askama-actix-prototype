@@ -8,6 +8,7 @@ use crate::{
     },
     Authors,
 };
+use actix_identity::Identity;
 use actix_session::Session;
 use actix_web::{
     error::{self, InternalError},
@@ -15,7 +16,7 @@ use actix_web::{
     http::StatusCode,
     post, put,
     web::{self, Data, Path, Query, Redirect},
-    App, HttpServer, Responder,
+    App, HttpResponse, HttpServer, Responder,
 };
 use askama::Template;
 use chrono::{Duration, Utc};
@@ -37,6 +38,10 @@ struct PostTemplate<'a> {
 }
 
 #[derive(Template)]
+#[template(path = "posts/add_post_button.html")]
+struct AddPostButton;
+
+#[derive(Template)]
 #[template(path = "posts/post_edit.html")]
 struct PostEditTemplate {
     data: PostData,
@@ -52,6 +57,19 @@ struct ListPostsTemplate<'a> {
 #[derive(serde::Deserialize)]
 struct PaginationQueryParams {
     page: Option<u16>,
+}
+
+#[get("/posts-add")]
+pub async fn add_post_button_endpoint(
+    user: Option<Identity>,
+) -> std::result::Result<HttpResponse, InternalError<String>> {
+    match user {
+        Some(_) => AddPostButton
+            .render()
+            .map(|body| HttpResponse::Ok().body(body))
+            .map_err(|err| InternalError::new(err.to_string(), StatusCode::INTERNAL_SERVER_ERROR)),
+        None => Ok(HttpResponse::Ok().body("")),
+    }
 }
 
 fn post_to_post_data(post: &Post, authors: &Authors) -> PostData {
@@ -89,15 +107,16 @@ fn get_post_by_id<'a>(
     posts: &Data<Mutex<Posts>>,
     authors: &Authors,
     auth: &'a Option<AuthInfo>,
-) -> Result<String, InternalError<String>> {
+) -> Result<HttpResponse, InternalError<String>> {
     match posts.lock().unwrap().0.iter().find(|p| p.id == *id) {
         Some(post) => PostTemplate {
             data: post_to_post_data(post, &authors),
             auth,
         }
         .render()
+        .map(|body| HttpResponse::Ok().body(body))
         .map_err(|err| InternalError::new(err.to_string(), StatusCode::INTERNAL_SERVER_ERROR)),
-        None => todo!(),
+        None => Ok(HttpResponse::NotFound().body("Post not found")),
     }
 }
 
@@ -106,9 +125,9 @@ pub async fn post_endpoint(
     id: Path<String>,
     posts: Data<Mutex<Posts>>,
     authors: Data<Authors>,
-    session: Session,
+    identify: Option<Identity>,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
-    let auth = get_auth_info(session);
+    let auth = get_auth_info(identify);
     get_post_by_id(&id, &posts, &authors, &auth)
 }
 
@@ -124,7 +143,7 @@ pub async fn post_update_endpoint(
     form: web::Form<PostUpdateFormData>,
     posts: Data<Mutex<Posts>>,
     authors: Data<Authors>,
-    session: Session,
+    identify: Option<Identity>,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
     let res = posts
         .lock()
@@ -137,7 +156,7 @@ pub async fn post_update_endpoint(
             post.content = form.content.clone();
             post
         });
-    let auth = get_auth_info(session);
+    let auth = get_auth_info(identify);
     get_post_by_id(&id, &posts, &authors, &auth)
 }
 
@@ -146,10 +165,10 @@ pub async fn list_posts_endpoint(
     pagination: Query<PaginationQueryParams>,
     posts: Data<Mutex<Posts>>,
     authors: Data<Authors>,
-    session: Session,
+    identify: Option<Identity>,
 ) -> std::result::Result<impl Responder, InternalError<String>> {
     let current_page = pagination.page.unwrap_or(0);
-    let auth = get_auth_info(session);
+    let auth = get_auth_info(identify);
     ListPostsTemplate {
         posts: &posts
             .lock()

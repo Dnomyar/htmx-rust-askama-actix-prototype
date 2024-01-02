@@ -11,7 +11,7 @@
 <body>
     <div hx-get="/auth/status" hx-trigger="load"></div>
     <h2>Posts</h2>
-    <button hx-post="/posts" hx-target=".posts" hx-swap="afterbegin">Add post</button>
+    <div hx-get="/posts-add" hx-trigger="load, auth-status-changed from:body"></div>
     <div hx-get="/posts?page=0" hx-trigger="load, auth-status-changed from:body">
         Loading messages
     </div>

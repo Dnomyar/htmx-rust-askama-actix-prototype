@@ -1,5 +1,11 @@
+use actix_identity::Identity;
 use actix_session::Session;
-use actix_web::{error::InternalError, get, http::StatusCode, put, HttpResponse, Responder};
+use actix_web::{
+    error::InternalError,
+    get,
+    http::{header::TryIntoHeaderPair, StatusCode},
+    put, HttpMessage, HttpRequest, HttpResponse, Responder,
+};
 use askama::Template;
 
 static SESSION_NAME: &str = "user_id";
@@ -19,27 +25,68 @@ pub struct AuthInfo {
     pub name: String,
 }
 
-pub fn get_auth_info(session: Session) -> Option<AuthInfo> {
-    session
-        .get::<String>(SESSION_NAME)
-        .ok()
-        .flatten()
-        .map(|user_id| AuthInfo {
-            user_id: user_id.to_string(),
-            name: user_id.to_string(),
-        })
+pub fn get_auth_info(identity: Option<Identity>) -> Option<AuthInfo> {
+    identity.map(|id| AuthInfo {
+        user_id: id.id().unwrap_or("".to_string()),
+        name: id.id().unwrap_or("".to_string()),
+    })
 }
 
-pub fn render_auth_status(session: Session) -> std::result::Result<String, InternalError<String>> {
-    match session.get::<String>(SESSION_NAME) {
-        Ok(Some(value)) => LoggedIn {
-            user_id: value.to_string(),
-        }
-        .render()
-        .map_err(|e| InternalError::new(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)),
-        Ok(None) => NotLoggedIn
+pub fn render_auth_status(
+    user: Option<Identity>,
+    headers: Option<impl TryIntoHeaderPair>,
+) -> HttpResponse {
+    match user {
+        Some(value) => value
+            .id()
+            .map(|user_id| {
+                LoggedIn { user_id: user_id }
+                    .render()
+                    .map(|body| {
+                        let mut ok = HttpResponse::Ok();
+                        match headers {
+                            Some(headers) => {
+                                ok.insert_header(headers);
+                            }
+                            None => {}
+                        }
+                        ok.body(body)
+                    })
+                    .unwrap_or_else(|e| {
+                        HttpResponse::InternalServerError().body("Internal Server Error")
+                    })
+            })
+            .unwrap_or_else(|e| HttpResponse::InternalServerError().body("Internal Server Error")),
+        None => NotLoggedIn
             .render()
-            .map_err(|e| InternalError::new(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)),
+            .map(|body| {
+                let mut ok = HttpResponse::Ok();
+                match headers {
+                    Some(headers) => {
+                        ok.insert_header(headers);
+                    }
+                    None => {}
+                }
+                ok.body(body)
+            })
+            .unwrap_or_else(|e| HttpResponse::InternalServerError().body("Internal Server Error")),
+    }
+}
+
+#[get("/auth/status")]
+pub async fn auth_status(user: Option<Identity>) -> HttpResponse {
+    render_auth_status(user, None::<(&str, &str)>)
+}
+
+#[put("/auth/login")]
+pub async fn login(
+    request: HttpRequest,
+) -> std::result::Result<HttpResponse, InternalError<String>> {
+    match Identity::login(&request.extensions(), "User1".into()) {
+        Ok(identity) => Ok(render_auth_status(
+            Some(identity),
+            Some(("HX-Trigger", "auth-status-changed")),
+        )),
         Err(e) => Err(InternalError::new(
             e.to_string(),
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -47,32 +94,8 @@ pub fn render_auth_status(session: Session) -> std::result::Result<String, Inter
     }
 }
 
-#[get("/auth/status")]
-pub async fn auth_status(session: Session) -> std::result::Result<String, InternalError<String>> {
-    render_auth_status(session)
-}
-
-#[put("/auth/login")]
-pub async fn login(session: Session) -> std::result::Result<HttpResponse, InternalError<String>> {
-    session
-        .insert(SESSION_NAME, "123".to_string())
-        .map_err(|e| InternalError::new(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR))?;
-    render_auth_status(session).map(|body| {
-        HttpResponse::Ok()
-            .insert_header(("HX-Trigger", "auth-status-changed"))
-            .body(body)
-    })
-}
-
 #[put("/auth/logout")]
-pub async fn logout(session: Session) -> std::result::Result<HttpResponse, InternalError<String>> {
-    session.remove(SESSION_NAME).ok_or(InternalError::new(
-        "unable to remove the session".to_string(),
-        StatusCode::INTERNAL_SERVER_ERROR,
-    ))?;
-    render_auth_status(session).map(|body| {
-        HttpResponse::Ok()
-            .insert_header(("HX-Trigger", "auth-status-changed"))
-            .body(body)
-    })
+pub async fn logout(user: Identity) -> HttpResponse {
+    user.logout();
+    render_auth_status(None, Some(("HX-Trigger", "auth-status-changed")))
 }
