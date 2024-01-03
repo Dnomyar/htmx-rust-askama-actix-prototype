@@ -38,7 +38,7 @@ struct PaginationQueryParams {
     page: Option<u16>,
 }
 
-#[get("/posts/ui/add")]
+#[get("/posts/add")]
 pub async fn add_post_button_endpoint(
     user: Option<Identity>,
 ) -> std::result::Result<HttpResponse, InternalError<String>> {
@@ -75,7 +75,7 @@ fn create_post_data_from_repository(
     }
 }
 
-#[get("/posts/ui/posts/{id}/edit")]
+#[get("/posts/{id}/edit")]
 pub async fn edit_post_endpoint(
     id: Path<String>,
     post_respository: Data<Box<dyn PostRepository>>,
@@ -109,8 +109,8 @@ fn get_post_by_id<'a>(
     }
 }
 
-#[get("/posts/ui/posts/{id}")]
-pub async fn post_endpoint(
+#[get("/posts/{id}")]
+pub async fn get_post_endpoint(
     id: Path<String>,
     post_respository: Data<Box<dyn PostRepository>>,
     author_repository: Data<Box<dyn AuthorRepository>>,
@@ -144,7 +144,7 @@ fn update_post(
 }
 
 #[put("/posts/{id}")]
-pub async fn post_update_endpoint(
+pub async fn update_post_endpoint(
     id: Path<String>,
     form: web::Form<PostUpdateFormData>,
     post_repository: Data<Box<dyn PostRepository>>,
