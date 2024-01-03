@@ -4,7 +4,8 @@ mod tests {
         time::Duration,
     };
 
-    use playwright::Playwright;
+    use playwright::{api::BrowserContext, Playwright};
+
     #[tokio::test]
     async fn test_posts() -> Result<(), playwright::Error> {
         println!("Initializing playwright");
