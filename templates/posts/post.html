@@ -1,5 +1,5 @@
 <div>
-  <h3>{{data.title}}</h3>
+  <h3 class="post-title">{{data.title}}</h3>
   <p>{{data.published_at}} by {{data.author}}</p>
   {% if auth.is_some() %}
   <button hx-get="/posts/{{data.id}}/edit" hx-trigger="edit" _="on click
@@ -16,5 +16,5 @@
              trigger edit">
     Edit</button>
   {% endif %}
-  <p>{{data.content}}</p>
+  <p class="post-content">{{data.content}}</p>
 </div>
